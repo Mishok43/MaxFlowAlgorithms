@@ -21,6 +21,12 @@
     <ClInclude Include="HelpData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Benchmark.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Algorithms.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">

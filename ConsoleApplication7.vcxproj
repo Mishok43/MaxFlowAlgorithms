@@ -151,6 +151,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Algorithms.h" />
+    <ClInclude Include="Benchmark.h" />
     <ClInclude Include="HelpData.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>

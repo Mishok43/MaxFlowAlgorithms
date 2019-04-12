@@ -1,3 +1,4 @@
+
 #pragma once
 #include "pch.h"
 #include <string>
@@ -39,7 +40,9 @@ struct DOptions
 
 		char* inFilenameData = getCMDOption(argBegin, argEnd, "-i");
 		assert(inFilenameData != nullptr);
-		options.outFilename = inFilenameData;
+		options.inFilename = inFilenameData;
+
+		return options;
 	}
 };
 
@@ -49,6 +52,8 @@ struct DBenchmarkState
 	std::vector<std::int32_t> numVertices;
 	std::vector<std::array<double, 3>> resData;
 
+	uint32_t numExperiments;
+
 public:
 	void parseInputFiles(const std::string& filename)
 	{
@@ -57,7 +62,7 @@ public:
 		assert(fin.is_open());
 
 		std::string s;
-		while (std::getline(fin, s))
+		do
 		{
 			int32_t numV;
 			fin >> numV;
@@ -66,8 +71,12 @@ public:
 			fin >> filenameStr;
 			inputFilename.emplace_back(std::move(filenameStr));
 			numVertices.push_back(numV);
-		}
+		} while (!fin.eof());
 		fin.close();
+
+		numExperiments = inputFilename.size();
+
+		resData.resize(numExperiments);
 	}
 
 	void writeOutput(const std::string& filename)
@@ -78,7 +87,7 @@ public:
 
 		for (std::size_t i = 0; i < resData.size(); ++i)
 		{
-			out << filename << ";" << resData[i][0] << ";" << resData[i][1] << ";" << resData[i][2] << "\n";
+			out << inputFilename[i] << ";" << resData[i][0] << ";" << resData[i][1] << ";" << resData[i][2] << "\n";
 		}
 
 		out.close();
@@ -87,28 +96,66 @@ public:
 
 struct DNode
 {
-	std::vector<DNode*> children;
+	// stores children by index for saving space and increasing cache locality. the same for flow
+	std::vector<uint16_t> children;
 	std::vector<uint8_t> flow;
 
 public:
-	static DNode parseFromFile(const std::string& filename, std::size_t numVertices)
+	static std::vector<DNode> parseFromFile(const std::string& filename, size_t numVertices)
 	{
 		std::fstream fin;
-		fin.open(filename, std::ios::in);
+		fin.open("inputs/"+filename, std::ios::in);
 		assert(fin.is_open());
-		std::string s;
 
 
-		DNode;
-		while (std::getline(fin, s))
+
+		std::vector<DNode> nodes(numVertices);
+
+		
+		for(std::size_t i=0; i < numVertices; ++i)
 		{
-			for (std::size_t i = 0; i < numVertices; ++i)
+			DNode& node = nodes[i];
+			for (size_t j = 0; j < numVertices; ++j)
 			{
-
+				uint16_t d;
+				uint8_t capacity;
+				fin >> d;
+				capacity = (uint8_t)d;
+				if (capacity != 0)
+				{
+					node.children.push_back(j);
+					node.flow.push_back(capacity);
+				}
 			}
 		}
 
-
 		fin.close();
+
+		return nodes;
+	}
+
+	static void writeFlowsToFile(const std::vector<DNode> data, const std::string& filename)
+	{
+		std::fstream fout;
+		fout.open("results/"+filename, std::ios::out);
+		assert(fout.is_open());
+
+		uint32_t maxFlow = 0;
+		const DNode& rootNode = data[0];
+		for (size_t i = 0; i < rootNode.flow.size(); ++i)
+		{
+			maxFlow += rootNode.flow[i];
+		}
+
+		fout << maxFlow << "\n";
+		for (size_t i = 0; i < data.size(); ++i)
+		{
+			const DNode& node = data[i];
+			for (size_t j = 0; j < node.flow.size(); ++j)
+			{
+				fout << i << " -> " << node.children[j] << ": " << (uint16_t)(node.flow[j]) << "\n";
+			}
+		}
+		fout.close();
 	}
 };

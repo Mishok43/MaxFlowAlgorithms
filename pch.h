@@ -11,4 +11,15 @@
 
 // TODO: add headers that you want to pre-compile here
 #include <assert.h>
+#include <stdint.h>
+#include <algorithm>
+
+using uint8_t = std::uint8_t;
+using uint16_t = std::uint16_t;
+using int16_t = std::int16_t;
+using uint32_t = std::uint32_t;
+using int32_t = std::int32_t;
+using size_t = std::size_t;
+
+
 #endif //PCH_H
