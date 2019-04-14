@@ -97,14 +97,15 @@ public:
 struct DNode
 {
 	// stores children by index for saving space and increasing cache locality. the same for flow
-	std::vector<uint16_t> children;
-	std::vector<uint8_t> flow;
+	std::vector<uint16_t> children; // 1, 3
+	std::vector<uint8_t> flow; // 10, 15
+	std::vector<uint16_t> revertIndex;
 
 public:
 	static std::vector<DNode> parseFromFile(const std::string& filename, size_t numVertices)
 	{
 		std::fstream fin;
-		fin.open("inputs/"+filename, std::ios::in);
+		fin.open("inputs/" + filename, std::ios::in);
 		assert(fin.is_open());
 
 
@@ -113,8 +114,8 @@ public:
 
 		
 		for(std::size_t i=0; i < numVertices; ++i)
-		{
-			DNode& node = nodes[i];
+		{	
+			DNode& node = nodes[i];	
 			for (size_t j = 0; j < numVertices; ++j)
 			{
 				uint16_t d;
@@ -153,9 +154,60 @@ public:
 			const DNode& node = data[i];
 			for (size_t j = 0; j < node.flow.size(); ++j)
 			{
-				fout << i << " -> " << node.children[j] << ": " << (uint16_t)(node.flow[j]) << "\n";
+				if ((uint16_t)(node.flow[j]) != 0)
+				{
+					fout << i << " -> " << node.children[j] << ": " << (uint16_t)(node.flow[j]) << "\n";
+				}
 			}
 		}
 		fout.close();
 	}
+
+	static std::vector<DNode> makeResidualGraph(const std::vector<DNode>& graph)
+	{
+		std::vector<DNode> rGraph = graph;
+
+
+		for (size_t i = 0; i < graph.size(); ++i)
+		{
+			const DNode& node = graph[i];
+			if (rGraph[i].revertIndex.empty())
+			{
+				rGraph[i].revertIndex.resize(rGraph[i].children.size());
+			}
+
+			for (size_t j = 0; j < node.children.size(); ++j)
+			{
+				uint16_t to = node.children[j];
+				rGraph[i].revertIndex[j] = rGraph[to].children.size();
+
+				if (rGraph[to].revertIndex.empty())
+				{
+					rGraph[to].revertIndex.resize(rGraph[to].children.size());
+				}
+			
+				rGraph[to].revertIndex.push_back(j);
+				rGraph[to].children.push_back(i);
+				rGraph[to].flow.push_back(0);
+			}
+		}
+
+
+		return rGraph;
+	}
+
+	static void fromResidualGraphToNormal(std::vector<DNode>& graph, const std::vector<DNode>& rGraph)
+	{
+		for (size_t i = 0; i < graph.size(); ++i)
+		{
+			DNode& node = graph[i];
+			const DNode& rNode = rGraph[i];
+
+			for (size_t j = 0; j < node.children.size(); ++j)
+			{
+				node.flow[j] -= rNode.flow[j];
+			}
+		}
+	}
+
 };

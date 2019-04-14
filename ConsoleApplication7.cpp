@@ -7,6 +7,11 @@
 #include "Algorithms.h"
 #include <iostream>
 
+#define FORD_FULKRESON_ENABLED
+#define EDMOND_KARP_ENABLED
+#define DINIC_ENABLED
+#define OUTPUTING_GRAPHS
+
 
 int main(int argc, char* argv[])
 {
@@ -20,29 +25,41 @@ int main(int argc, char* argv[])
 	{
 		std::string& inFilename = state.inputFilename[i];
 		int32_t numVerticies = state.numVertices[i];
-		std::vector<DNode> nodes = DNode::parseFromFile(inFilename, numVerticies);
+		std::vector<DNode> graph = DNode::parseFromFile(inFilename, numVerticies);
+		std::vector<DNode> rGraph = DNode::makeResidualGraph(graph); // make residual graph before the executing of algorithms for correcting counting time of execution
+
+		size_t numRepeatings = 10;
+
+#ifdef FORD_FULKRESON_ENABLED
+		std::vector<DNode> rGraph0 = rGraph;
+		BENCHMARK_MEAN(state.resData[i][0], FordFulkerson, numRepeatings, rGraph0);
+#endif
 		
-		size_t numRepeatings = std::max(2, numVerticies / 20);
+#ifdef EDMOND_KARP_ENABLED
+		std::vector<DNode> rGraph1 = rGraph;
+		BENCHMARK_MEAN(state.resData[i][1], EdmondsKarp, numRepeatings, rGraph1);
+#endif
 
-		std::vector<DNode> nodes0 = nodes;
-		BENCHMARK_MEAN(state.resData[i][0], FordFulkerson, numRepeatings, nodes0);
-
-		std::vector<DNode> nodes1 = nodes;
-		double resEK;
-		BENCHMARK_MEAN(state.resData[i][1], EdmondsKarp, numRepeatings, nodes1);
-
-		std::vector<DNode> nodes2 = nodes;
-		double resD;
-		BENCHMARK_MEAN(state.resData[i][2], Dinic, numRepeatings, nodes2);
+#ifdef DINIC_ENABLED
+		std::vector<DNode> rGraph2 = rGraph;
+		BENCHMARK_MEAN(state.resData[i][2], Dinic, numRepeatings, rGraph2);
+#endif
 		
-		resultsData[i] = std::move(nodes0);
+#ifdef OUTPUTING_GRAPHS
+		DNode::fromResidualGraphToNormal(graph, rGraph1);
+		resultsData[i] = std::move(graph);
 		resultsFilenames[i] = &inFilename;
+#endif
+
+		std::cout << i << std::endl;
 	}
-	
+
+#ifdef OUTPUTING_GRAPHS
 	for (size_t i = 0; i < state.numExperiments; ++i)
 	{
 		DNode::writeFlowsToFile(resultsData[i], *resultsFilenames[i]);
 	}
+#endif
 
 	state.writeOutput(options.outFilename);
 }
